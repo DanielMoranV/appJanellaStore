@@ -39,7 +39,8 @@ class Proveedores extends Table {
 /// Tabla de Ingresos de Mercadería (Compras)
 class IngresosMercaderia extends Table {
   IntColumn get idIngreso => integer().autoIncrement()();
-  IntColumn get idProveedor => integer().nullable().references(Proveedores, #idProveedor)();
+  IntColumn get idProveedor =>
+      integer().nullable().references(Proveedores, #idProveedor)();
   DateTimeColumn get fecha => dateTime()();
   RealColumn get totalInversion => real()();
 }
@@ -47,7 +48,11 @@ class IngresosMercaderia extends Table {
 /// Tabla de Detalles de Ingresos
 class IngresosDetalle extends Table {
   IntColumn get idDetalleIngreso => integer().autoIncrement()();
-  IntColumn get idIngreso => integer().references(IngresosMercaderia, #idIngreso, onDelete: KeyAction.cascade)();
+  IntColumn get idIngreso => integer().references(
+    IngresosMercaderia,
+    #idIngreso,
+    onDelete: KeyAction.cascade,
+  )();
   IntColumn get idProducto => integer().references(Productos, #idProducto)();
   IntColumn get cantidad => integer()();
   RealColumn get costoUnitario => real()();
@@ -66,51 +71,89 @@ class Ventas extends Table {
 /// Tabla de Detalles de Ventas
 class VentasDetalle extends Table {
   IntColumn get idDetalle => integer().autoIncrement()();
-  IntColumn get idVenta => integer().references(Ventas, #idVenta, onDelete: KeyAction.cascade)();
+  IntColumn get idVenta =>
+      integer().references(Ventas, #idVenta, onDelete: KeyAction.cascade)();
   IntColumn get idProducto => integer().references(Productos, #idProducto)();
   IntColumn get cantidad => integer()();
   RealColumn get precioUnitario => real()();
   RealColumn get subtotal => real()();
 }
 
-/// Tabla de Créditos
+/// Tabla de Créditos (por Cliente)
 class Creditos extends Table {
   IntColumn get idCredito => integer().autoIncrement()();
-  IntColumn get idVenta => integer().references(Ventas, #idVenta)();
   IntColumn get idCliente => integer().references(Clientes, #idCliente)();
-  RealColumn get montoTotal => real()();
   RealColumn get saldoActual => real()();
-  DateTimeColumn get fecha => dateTime()();
+  DateTimeColumn get fechaUltimaActualizacion => dateTime()();
 }
 
 /// Tabla de Abonos
 class Abonos extends Table {
   IntColumn get idAbono => integer().autoIncrement()();
-  IntColumn get idCredito => integer().references(Creditos, #idCredito, onDelete: KeyAction.cascade)();
+  IntColumn get idCredito =>
+      integer().references(Creditos, #idCredito, onDelete: KeyAction.cascade)();
   DateTimeColumn get fecha => dateTime()();
   RealColumn get montoAbono => real()();
+}
+
+/// Tabla de Ajustes de Stock
+class AjustesStock extends Table {
+  IntColumn get idAjuste => integer().autoIncrement()();
+  IntColumn get idProducto => integer().references(Productos, #idProducto)();
+  DateTimeColumn get fecha => dateTime()();
+  TextColumn get tipo => text().withLength(max: 10)(); // 'INGRESO' o 'SALIDA'
+  IntColumn get cantidad => integer()();
+  TextColumn get motivo => text().withLength(max: 200)();
+  TextColumn get referencia =>
+      text().withLength(max: 100)(); // 'Stock Inicial', 'Ajuste Manual', etc.
 }
 
 // ============================================================================
 // DATABASE
 // ============================================================================
 
-@DriftDatabase(tables: [
-  Clientes,
-  Productos,
-  Proveedores,
-  IngresosMercaderia,
-  IngresosDetalle,
-  Ventas,
-  VentasDetalle,
-  Creditos,
-  Abonos,
-])
+@DriftDatabase(
+  tables: [
+    Clientes,
+    Productos,
+    Proveedores,
+    IngresosMercaderia,
+    IngresosDetalle,
+    Ventas,
+    VentasDetalle,
+    Creditos,
+    Abonos,
+    AjustesStock,
+  ],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 3;
+
+  @override
+  MigrationStrategy get migration {
+    return MigrationStrategy(
+      onCreate: (Migrator m) async {
+        await m.createAll();
+      },
+      onUpgrade: (Migrator m, int from, int to) async {
+        if (from < 2) {
+          // Migración de versión 1 a 2: Agregar tabla AjustesStock
+          await m.createTable(ajustesStock);
+        }
+        if (from < 3) {
+          // Migración de versión 2 a 3: Rediseñar sistema de créditos
+          // Eliminar tablas antiguas y recrearlas con nueva estructura
+          await m.deleteTable('abonos');
+          await m.deleteTable('creditos');
+          await m.createTable(creditos);
+          await m.createTable(abonos);
+        }
+      },
+    );
+  }
 
   // ============================================================================
   // QUERIES PERSONALIZADAS
@@ -118,7 +161,9 @@ class AppDatabase extends _$AppDatabase {
 
   // Obtener productos con stock bajo (menos de 5 unidades)
   Future<List<Producto>> getProductosBajoStock() {
-    return (select(productos)..where((p) => p.stock.isSmallerThanValue(5))).get();
+    return (select(
+      productos,
+    )..where((p) => p.stock.isSmallerThanValue(5))).get();
   }
 
   // Obtener clientes con deudas activas
@@ -129,7 +174,9 @@ class AppDatabase extends _$AppDatabase {
       ..groupBy([creditos.idCliente]);
 
     final result = await query.get();
-    final clienteIds = result.map((row) => row.read(creditos.idCliente)!).toList();
+    final clienteIds = result
+        .map((row) => row.read(creditos.idCliente)!)
+        .toList();
 
     return (select(clientes)..where((c) => c.idCliente.isIn(clienteIds))).get();
   }
@@ -159,12 +206,11 @@ class AppDatabase extends _$AppDatabase {
   }
 
   // Obtener productos más vendidos
-  Future<List<ProductoVendido>> getProductosMasVendidos({int limit = 10}) async {
+  Future<List<ProductoVendido>> getProductosMasVendidos({
+    int limit = 10,
+  }) async {
     final query = selectOnly(ventasDetalle)
-      ..addColumns([
-        ventasDetalle.idProducto,
-        ventasDetalle.cantidad.sum(),
-      ])
+      ..addColumns([ventasDetalle.idProducto, ventasDetalle.cantidad.sum()])
       ..groupBy([ventasDetalle.idProducto])
       ..orderBy([OrderingTerm.desc(ventasDetalle.cantidad.sum())])
       ..limit(limit);
@@ -175,12 +221,13 @@ class AppDatabase extends _$AppDatabase {
     for (final row in result) {
       final idProducto = row.read(ventasDetalle.idProducto)!;
       final cantidadTotal = row.read(ventasDetalle.cantidad.sum())!;
-      final producto = await (select(productos)..where((p) => p.idProducto.equals(idProducto))).getSingle();
+      final producto = await (select(
+        productos,
+      )..where((p) => p.idProducto.equals(idProducto))).getSingle();
 
-      productosVendidos.add(ProductoVendido(
-        producto: producto,
-        cantidadVendida: cantidadTotal,
-      ));
+      productosVendidos.add(
+        ProductoVendido(producto: producto, cantidadVendida: cantidadTotal),
+      );
     }
 
     return productosVendidos;
@@ -189,9 +236,11 @@ class AppDatabase extends _$AppDatabase {
   // Obtener detalles de una venta
   Future<List<DetalleVentaConProducto>> getDetallesVenta(int idVenta) async {
     final query = select(ventasDetalle).join([
-      innerJoin(productos, productos.idProducto.equalsExp(ventasDetalle.idProducto)),
-    ])
-      ..where(ventasDetalle.idVenta.equals(idVenta));
+      innerJoin(
+        productos,
+        productos.idProducto.equalsExp(ventasDetalle.idProducto),
+      ),
+    ])..where(ventasDetalle.idVenta.equals(idVenta));
 
     final result = await query.get();
     return result.map((row) {
@@ -212,11 +261,15 @@ class AppDatabase extends _$AppDatabase {
 
   // Obtener créditos activos (con saldo pendiente)
   Future<List<CreditoConCliente>> getCreditosActivos() async {
-    final query = select(creditos).join([
-      innerJoin(clientes, clientes.idCliente.equalsExp(creditos.idCliente)),
-    ])
-      ..where(creditos.saldoActual.isBiggerThanValue(0))
-      ..orderBy([OrderingTerm.desc(creditos.fecha)]);
+    final query =
+        select(creditos).join([
+            innerJoin(
+              clientes,
+              clientes.idCliente.equalsExp(creditos.idCliente),
+            ),
+          ])
+          ..where(creditos.saldoActual.isBiggerThanValue(0))
+          ..orderBy([OrderingTerm.desc(creditos.fecha)]);
 
     final result = await query.get();
     return result.map((row) {
@@ -252,30 +305,21 @@ class ProductoVendido {
   final Producto producto;
   final int cantidadVendida;
 
-  ProductoVendido({
-    required this.producto,
-    required this.cantidadVendida,
-  });
+  ProductoVendido({required this.producto, required this.cantidadVendida});
 }
 
 class DetalleVentaConProducto {
   final VentasDetalleData detalle;
   final Producto producto;
 
-  DetalleVentaConProducto({
-    required this.detalle,
-    required this.producto,
-  });
+  DetalleVentaConProducto({required this.detalle, required this.producto});
 }
 
 class CreditoConCliente {
   final Credito credito;
   final Cliente cliente;
 
-  CreditoConCliente({
-    required this.credito,
-    required this.cliente,
-  });
+  CreditoConCliente({required this.credito, required this.cliente});
 }
 
 // ============================================================================

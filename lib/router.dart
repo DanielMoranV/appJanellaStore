@@ -15,6 +15,7 @@ import 'package:janella_store/screens/proveedores_screen.dart';
 import 'package:janella_store/screens/pos_screen.dart';
 import 'package:janella_store/screens/kardex_screen.dart';
 import 'package:janella_store/screens/historial_ventas_screen.dart';
+import 'package:janella_store/screens/seeder_screen.dart';
 
 final router = GoRouter(
   initialLocation: '/',
@@ -107,6 +108,11 @@ final router = GoRouter(
       path: '/historial-ventas',
       name: 'historial-ventas',
       builder: (context, state) => const HistorialVentasScreen(),
+    ),
+    GoRoute(
+      path: '/seeder',
+      name: 'seeder',
+      builder: (context, state) => const SeederScreen(),
     ),
   ],
 );

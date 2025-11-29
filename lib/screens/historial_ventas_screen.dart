@@ -11,7 +11,8 @@ class HistorialVentasScreen extends ConsumerStatefulWidget {
   const HistorialVentasScreen({super.key});
 
   @override
-  ConsumerState<HistorialVentasScreen> createState() => _HistorialVentasScreenState();
+  ConsumerState<HistorialVentasScreen> createState() =>
+      _HistorialVentasScreenState();
 }
 
 class _HistorialVentasScreenState extends ConsumerState<HistorialVentasScreen> {
@@ -32,6 +33,8 @@ class _HistorialVentasScreenState extends ConsumerState<HistorialVentasScreen> {
   }
 
   Future<void> _cargarVentas() async {
+    if (!mounted) return;
+
     setState(() => _isLoading = true);
 
     final ventasRepo = ref.read(ventasRepositoryProvider);
@@ -42,31 +45,47 @@ class _HistorialVentasScreenState extends ConsumerState<HistorialVentasScreen> {
 
       if (_clienteSeleccionado != null) {
         // Filtrar por cliente
-        ventas = await ventasRepo.obtenerPorCliente(_clienteSeleccionado!.idCliente);
+        ventas = await ventasRepo.obtenerPorCliente(
+          _clienteSeleccionado!.idCliente,
+        );
       } else if (_fechaInicio != null && _fechaFin != null) {
         // Filtrar por rango de fechas
-        ventas = await (db.select(db.ventas)
-              ..where((v) =>
-                  v.fecha.isBiggerOrEqualValue(_fechaInicio!) &
-                  v.fecha.isSmallerOrEqualValue(_fechaFin!.add(const Duration(days: 1))))
-              ..orderBy([(v) => OrderingTerm.desc(v.fecha)]))
-            .get();
+        ventas =
+            await (db.select(db.ventas)
+                  ..where(
+                    (v) =>
+                        v.fecha.isBiggerOrEqualValue(_fechaInicio!) &
+                        v.fecha.isSmallerOrEqualValue(
+                          _fechaFin!.add(const Duration(days: 1)),
+                        ),
+                  )
+                  ..orderBy([(v) => OrderingTerm.desc(v.fecha)]))
+                .get();
       } else {
         // Todas las ventas
-        ventas = await (db.select(db.ventas)
-              ..orderBy([(v) => OrderingTerm.desc(v.fecha)]))
-            .get();
+        ventas = await (db.select(
+          db.ventas,
+        )..orderBy([(v) => OrderingTerm.desc(v.fecha)])).get();
       }
 
-      setState(() {
-        _ventas = ventas;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() => _isLoading = false);
       if (mounted) {
+        setState(() {
+          _ventas = ventas;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error cargando ventas: $e'); // Debug
+      if (mounted) {
+        setState(() {
+          _ventas = [];
+          _isLoading = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(
+            content: Text('Error al cargar ventas: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -158,203 +177,278 @@ class _HistorialVentasScreenState extends ConsumerState<HistorialVentasScreen> {
         title: const Text('Historial de Ventas'),
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _cargarVentas,
+            tooltip: 'Recargar',
+          ),
+        ],
       ),
-      body: Column(
-        children: [
-          // Filtros
-          Container(
-            padding: const EdgeInsets.all(16),
-            color: Colors.indigo.shade50,
-            child: Column(
-              children: [
-                // Filtro por cliente
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _seleccionarCliente,
-                        icon: const Icon(Icons.person),
-                        label: Text(
-                          _clienteSeleccionado?.nombre ?? 'Todos los clientes',
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    OutlinedButton.icon(
-                      onPressed: _seleccionarRangoFechas,
-                      icon: const Icon(Icons.date_range),
-                      label: const Text('Fechas'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                // Filtros rápidos por mes
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Filtros
+            Container(
+              padding: const EdgeInsets.all(16),
+              color: Colors.indigo.shade50,
+              child: Column(
+                children: [
+                  // Filtro por cliente
+                  Row(
                     children: [
-                      for (int i = 1; i <= 12; i++)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: FilterChip(
-                            label: Text(DateFormat('MMM', 'es').format(DateTime(2024, i))),
-                            selected: _fechaInicio?.month == i &&
-                                _clienteSeleccionado == null,
-                            onSelected: (_) => _filtrarPorMes(i),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _seleccionarCliente,
+                          icon: const Icon(Icons.person),
+                          label: Text(
+                            _clienteSeleccionado?.nombre ??
+                                'Todos los clientes',
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                      ),
+                      const SizedBox(width: 8),
+                      OutlinedButton.icon(
+                        onPressed: _seleccionarRangoFechas,
+                        icon: const Icon(Icons.date_range),
+                        label: const Text('Fechas'),
+                      ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 8),
-                // Rango actual
-                if (_fechaInicio != null && _fechaFin != null && _clienteSeleccionado == null)
-                  Text(
-                    'Del ${DateFormat('dd/MM/yyyy').format(_fechaInicio!)} al ${DateFormat('dd/MM/yyyy').format(_fechaFin!)}',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                  const SizedBox(height: 8),
+                  // Filtros rápidos por mes
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        for (int i = 1; i <= 12; i++)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: FilterChip(
+                              label: Text(
+                                DateFormat(
+                                  'MMM',
+                                  'es',
+                                ).format(DateTime(2024, i)),
+                              ),
+                              selected:
+                                  _fechaInicio?.month == i &&
+                                  _clienteSeleccionado == null,
+                              onSelected: (_) => _filtrarPorMes(i),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
-              ],
-            ),
-          ),
-          // Resumen
-          Container(
-            padding: const EdgeInsets.all(16),
-            color: Colors.indigo.shade100,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                Column(
-                  children: [
-                    const Text('Total Ventas', style: TextStyle(fontSize: 12)),
+                  const SizedBox(height: 8),
+                  // Rango actual
+                  if (_fechaInicio != null &&
+                      _fechaFin != null &&
+                      _clienteSeleccionado == null)
                     Text(
-                      '${_ventas.length}',
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      'Del ${DateFormat('dd/MM/yyyy').format(_fechaInicio!)} al ${DateFormat('dd/MM/yyyy').format(_fechaFin!)}',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[700]),
                     ),
-                  ],
-                ),
-                Column(
-                  children: [
-                    const Text('Monto Total', style: TextStyle(fontSize: 12)),
-                    Text(
-                      AppConstants.currencyFormat.format(_totalVentas),
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          // Lista de ventas
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _ventas.isEmpty
-                    ? const Center(child: Text('No hay ventas en este período'))
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _ventas.length,
-                        itemBuilder: (context, index) {
-                          final venta = _ventas[index];
-                          return FutureBuilder<Cliente?>(
-                            future: ref
-                                .read(clientesRepositoryProvider)
-                                .obtenerPorId(venta.idCliente),
-                            builder: (context, snapshot) {
-                              final cliente = snapshot.data;
-                              return Card(
-                                margin: const EdgeInsets.only(bottom: 12),
-                                child: ExpansionTile(
-                                  leading: CircleAvatar(
-                                    backgroundColor: venta.esCredito
-                                        ? Colors.orange
-                                        : Colors.green,
-                                    child: Icon(
-                                      venta.esCredito
-                                          ? Icons.credit_card
-                                          : Icons.attach_money,
-                                      color: Colors.white,
-                                    ),
+            // Resumen
+            Container(
+              padding: const EdgeInsets.all(16),
+              color: Colors.indigo.shade100,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  Column(
+                    children: [
+                      const Text(
+                        'Total Ventas',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                      Text(
+                        '${_ventas.length}',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Column(
+                    children: [
+                      const Text('Monto Total', style: TextStyle(fontSize: 12)),
+                      Text(
+                        AppConstants.currencyFormat.format(_totalVentas),
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            // Lista de ventas
+            Expanded(
+              child: _isLoading
+                  ? const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 16),
+                          Text('Cargando ventas...'),
+                        ],
+                      ),
+                    )
+                  : _ventas.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.receipt_long,
+                            size: 64,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No hay ventas en este período',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextButton.icon(
+                            onPressed: () {
+                              setState(() {
+                                final now = DateTime.now();
+                                _fechaInicio = DateTime(now.year, now.month, 1);
+                                _fechaFin = DateTime(
+                                  now.year,
+                                  now.month + 1,
+                                  0,
+                                );
+                                _clienteSeleccionado = null;
+                              });
+                              _cargarVentas();
+                            },
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Recargar'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _ventas.length,
+                      itemBuilder: (context, index) {
+                        final venta = _ventas[index];
+                        return FutureBuilder<Cliente?>(
+                          future: ref
+                              .read(clientesRepositoryProvider)
+                              .obtenerPorId(venta.idCliente),
+                          builder: (context, snapshot) {
+                            final cliente = snapshot.data;
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              child: ExpansionTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: venta.esCredito
+                                      ? Colors.orange
+                                      : Colors.green,
+                                  child: Icon(
+                                    venta.esCredito
+                                        ? Icons.credit_card
+                                        : Icons.attach_money,
+                                    color: Colors.white,
                                   ),
-                                  title: Text(
-                                    cliente?.nombre ?? 'Cargando...',
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                title: Text(
+                                  cliente?.nombre ?? 'Cargando...',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                  subtitle: Text(
-                                    DateFormat('dd/MM/yyyy HH:mm').format(venta.fecha),
-                                  ),
-                                  trailing: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      Text(
-                                        AppConstants.currencyFormat.format(venta.total),
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      Text(
-                                        venta.esCredito ? 'Crédito' : 'Efectivo',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: venta.esCredito
-                                              ? Colors.orange
-                                              : Colors.green,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                                ),
+                                subtitle: Text(
+                                  DateFormat(
+                                    'dd/MM/yyyy HH:mm',
+                                  ).format(venta.fecha),
+                                ),
+                                trailing: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
-                                    FutureBuilder<List<DetalleVentaConProducto>>(
-                                      future: ref
-                                          .read(databaseProvider)
-                                          .getDetallesVenta(venta.idVenta),
-                                      builder: (context, detallesSnapshot) {
-                                        if (!detallesSnapshot.hasData) {
-                                          return const Padding(
-                                            padding: EdgeInsets.all(16),
-                                            child: CircularProgressIndicator(),
-                                          );
-                                        }
-
-                                        final detalles = detallesSnapshot.data!;
-                                        return Column(
-                                          children: detalles.map((item) {
-                                            return ListTile(
-                                              dense: true,
-                                              title: Text(item.producto.nombre),
-                                              subtitle: Text(
-                                                '${item.detalle.cantidad} × ${AppConstants.currencyFormat.format(item.detalle.precioUnitario)}',
-                                              ),
-                                              trailing: Text(
-                                                AppConstants.currencyFormat
-                                                    .format(item.detalle.subtotal),
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            );
-                                          }).toList(),
-                                        );
-                                      },
+                                    Text(
+                                      AppConstants.currencyFormat.format(
+                                        venta.total,
+                                      ),
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      venta.esCredito ? 'Crédito' : 'Efectivo',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: venta.esCredito
+                                            ? Colors.orange
+                                            : Colors.green,
+                                      ),
                                     ),
                                   ],
                                 ),
-                              );
-                            },
-                          );
-                        },
-                      ),
-          ),
-        ],
+                                children: [
+                                  FutureBuilder<List<DetalleVentaConProducto>>(
+                                    future: ref
+                                        .read(databaseProvider)
+                                        .getDetallesVenta(venta.idVenta),
+                                    builder: (context, detallesSnapshot) {
+                                      if (!detallesSnapshot.hasData) {
+                                        return const Padding(
+                                          padding: EdgeInsets.all(16),
+                                          child: CircularProgressIndicator(),
+                                        );
+                                      }
+
+                                      final detalles = detallesSnapshot.data!;
+                                      return Column(
+                                        children: detalles.map((item) {
+                                          return ListTile(
+                                            dense: true,
+                                            title: Text(item.producto.nombre),
+                                            subtitle: Text(
+                                              '${item.detalle.cantidad} × ${AppConstants.currencyFormat.format(item.detalle.precioUnitario)}',
+                                            ),
+                                            trailing: Text(
+                                              AppConstants.currencyFormat
+                                                  .format(
+                                                    item.detalle.subtotal,
+                                                  ),
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          );
+                                        }).toList(),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
