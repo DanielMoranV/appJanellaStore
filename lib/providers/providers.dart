@@ -7,6 +7,7 @@ import 'package:janella_store/data/repositories/ingresos_repository.dart';
 import 'package:janella_store/data/repositories/ventas_repository.dart';
 import 'package:janella_store/data/repositories/creditos_repository.dart';
 import 'package:janella_store/data/repositories/abonos_repository.dart';
+import 'package:janella_store/services/reportes_service.dart';
 
 // Provider de la base de datos
 final databaseProvider = Provider<AppDatabase>((ref) {
@@ -51,6 +52,23 @@ final ventasRepositoryProvider = Provider<VentasRepository>((ref) {
   final productosRepo = ref.watch(productosRepositoryProvider);
   final creditosRepo = ref.watch(creditosRepositoryProvider);
   return VentasRepository(db, productosRepo, creditosRepo);
+});
+
+final reportesServiceProvider = Provider<ReportesService>((ref) {
+  final db = ref.watch(databaseProvider);
+  final ventasRepo = ref.watch(ventasRepositoryProvider);
+  final ingresosRepo = ref.watch(ingresosRepositoryProvider);
+  final creditosRepo = ref.watch(creditosRepositoryProvider);
+  final productosRepo = ref.watch(productosRepositoryProvider);
+  final abonosRepo = ref.watch(abonosRepositoryProvider);
+  return ReportesService(
+    db: db,
+    ventasRepo: ventasRepo,
+    ingresosRepo: ingresosRepo,
+    creditosRepo: creditosRepo,
+    productosRepo: productosRepo,
+    abonosRepo: abonosRepo,
+  );
 });
 
 // Stream providers para datos en tiempo real

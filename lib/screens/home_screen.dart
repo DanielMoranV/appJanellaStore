@@ -17,42 +17,7 @@ class HomeScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Janella Store'),
-        actions: [
-          // Carrito badge
-          Stack(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.shopping_cart),
-                onPressed: () => context.push('/carrito'),
-              ),
-              if (cartState.totalItems > 0)
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 18,
-                      minHeight: 18,
-                    ),
-                    child: Text(
-                      '${cartState.totalItems}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ],
+        actions: [],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -124,6 +89,13 @@ class HomeScreen extends ConsumerWidget {
               color: Colors.indigo.shade700,
               onTap: () => context.push('/historial-ventas'),
             ),
+            _MenuCard(
+              icon: Icons.storage,
+              title: 'Seeder',
+              subtitle: 'Poblar BD',
+              color: Colors.deepPurple.shade700,
+              onTap: () => context.push('/seeder'),
+            ),
           ],
         ),
       ),
@@ -168,7 +140,7 @@ class _MenuCard extends StatelessWidget {
             children: [
               Icon(
                 icon,
-                size: 64,
+                size: 48,
                 color: Colors.white,
               ),
               const SizedBox(height: 12),

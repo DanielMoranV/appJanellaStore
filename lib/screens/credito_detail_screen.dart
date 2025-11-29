@@ -6,10 +6,23 @@ import 'package:janella_store/data/database/database.dart';
 import 'package:intl/intl.dart';
 import 'package:janella_store/constants/app_constants.dart';
 
-class CreditoDetailScreen extends ConsumerWidget {
+class CreditoDetailScreen extends ConsumerStatefulWidget {
   final int idCredito;
 
   const CreditoDetailScreen({super.key, required this.idCredito});
+
+  @override
+  ConsumerState<CreditoDetailScreen> createState() => _CreditoDetailScreenState();
+}
+
+class _CreditoDetailScreenState extends ConsumerState<CreditoDetailScreen> {
+  int _refreshKey = 0;
+
+  void _refresh() {
+    setState(() {
+      _refreshKey++;
+    });
+  }
 
   Future<void> _registrarAbono(BuildContext context, WidgetRef ref, Credito credito) async {
     final montoController = TextEditingController();
@@ -80,7 +93,7 @@ class CreditoDetailScreen extends ConsumerWidget {
       final monto = double.parse(montoController.text);
 
       await abonosRepo.registrarAbono(
-        idCredito: idCredito,
+        idCredito: widget.idCredito,
         fecha: DateTime.now(),
         montoAbono: monto,
       );
@@ -92,6 +105,7 @@ class CreditoDetailScreen extends ConsumerWidget {
             backgroundColor: Colors.green,
           ),
         );
+        _refresh(); // Refrescar la pantalla automáticamente
       }
     } catch (e) {
       if (context.mounted) {
@@ -117,9 +131,10 @@ class CreditoDetailScreen extends ConsumerWidget {
         title: const Text('Detalle del Crédito'),
       ),
       body: FutureBuilder(
+        key: ValueKey(_refreshKey), // Forzar rebuild cuando cambia la key
         future: Future.wait([
-          creditosRepo.obtenerPorId(idCredito),
-          abonosRepo.obtenerPorCredito(idCredito),
+          creditosRepo.obtenerPorId(widget.idCredito),
+          abonosRepo.obtenerPorCredito(widget.idCredito),
         ]),
         builder: (context, AsyncSnapshot<List<dynamic>> snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -137,8 +152,10 @@ class CreditoDetailScreen extends ConsumerWidget {
             return const Center(child: Text('Crédito no encontrado'));
           }
 
-          final porcentajePagado =
-              ((credito.montoTotal - credito.saldoActual) / credito.montoTotal) * 100;
+          // Calcular el porcentaje pagado usando el montoTotal de la estructura
+          final porcentajePagado = credito.montoTotal > 0 
+              ? ((credito.montoTotal - credito.saldoActual) / credito.montoTotal) * 100
+              : 0.0;
 
           return Column(
             children: [
@@ -258,7 +275,7 @@ class CreditoDetailScreen extends ConsumerWidget {
         },
       ),
       floatingActionButton: FutureBuilder<Credito?>(
-        future: creditosRepo.obtenerPorId(idCredito),
+        future: creditosRepo.obtenerPorId(widget.idCredito),
         builder: (context, snapshot) {
           if (!snapshot.hasData || snapshot.data!.saldoActual <= 0) {
             return const SizedBox.shrink();

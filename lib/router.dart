@@ -7,6 +7,7 @@ import 'package:janella_store/screens/cart_screen.dart';
 import 'package:janella_store/screens/clientes_screen.dart';
 import 'package:janella_store/screens/cliente_form_screen.dart';
 import 'package:janella_store/screens/cliente_detail_screen.dart';
+import 'package:janella_store/screens/cliente_creditos_screen.dart';
 import 'package:janella_store/screens/creditos_screen.dart';
 import 'package:janella_store/screens/credito_detail_screen.dart';
 import 'package:janella_store/screens/ingreso_screen.dart';
@@ -64,6 +65,14 @@ final router = GoRouter(
       builder: (context, state) {
         final id = int.parse(state.pathParameters['id']!);
         return ClienteDetailScreen(idCliente: id);
+      },
+    ),
+    GoRoute(
+      path: '/clientes/:id/creditos',
+      name: 'cliente-creditos',
+      builder: (context, state) {
+        final id = int.parse(state.pathParameters['id']!);
+        return ClienteCreditosScreen(idCliente: id);
       },
     ),
     GoRoute(

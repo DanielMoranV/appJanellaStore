@@ -48,6 +48,9 @@ dependencies:
   # Navigation
   go_router: ^12.0.0
   
+  # Preferences
+  shared_preferences: ^2.2.0
+  
   # Charts
   fl_chart: ^0.65.0
   

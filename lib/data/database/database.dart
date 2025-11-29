@@ -79,12 +79,14 @@ class VentasDetalle extends Table {
   RealColumn get subtotal => real()();
 }
 
-/// Tabla de Créditos (por Cliente)
+/// Tabla de Créditos (vinculados a Ventas)
 class Creditos extends Table {
   IntColumn get idCredito => integer().autoIncrement()();
+  IntColumn get idVenta => integer().references(Ventas, #idVenta)();
   IntColumn get idCliente => integer().references(Clientes, #idCliente)();
+  RealColumn get montoTotal => real()();
   RealColumn get saldoActual => real()();
-  DateTimeColumn get fechaUltimaActualizacion => dateTime()();
+  DateTimeColumn get fecha => dateTime()();
 }
 
 /// Tabla de Abonos
@@ -130,7 +132,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {
@@ -146,6 +148,14 @@ class AppDatabase extends _$AppDatabase {
         if (from < 3) {
           // Migración de versión 2 a 3: Rediseñar sistema de créditos
           // Eliminar tablas antiguas y recrearlas con nueva estructura
+          await m.deleteTable('abonos');
+          await m.deleteTable('creditos');
+          await m.createTable(creditos);
+          await m.createTable(abonos);
+        }
+        if (from < 4) {
+          // Migración de versión 3 a 4: Restaurar estructura original de créditos
+          // con idVenta, montoTotal y fecha
           await m.deleteTable('abonos');
           await m.deleteTable('creditos');
           await m.createTable(creditos);

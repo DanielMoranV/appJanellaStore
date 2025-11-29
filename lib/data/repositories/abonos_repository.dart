@@ -41,6 +41,66 @@ class AbonosRepository {
     return idAbono;
   }
 
+  /// Registra un abono y lo distribuye automáticamente entre los créditos
+  /// activos del cliente en orden FIFO (más antiguos primero)
+  /// 
+  /// Ejemplo: Cliente debe S/ 80 (ventas: S/ 50, S/ 20, S/ 10)
+  /// Si abona S/ 75:
+  /// - Venta 1: SALDADA (S/ 50)
+  /// - Venta 2: SALDADA (S/ 20)
+  /// - Venta 3: Quedan S/ 5 de deuda
+  Future<List<int>> registrarAbonoDistribuido({
+    required int idCliente,
+    required double montoAbono,
+    required DateTime fecha,
+  }) async {
+    // 1. Obtener créditos activos del cliente ordenados por fecha (FIFO)
+    final creditos = await _creditosRepo.obtenerCreditosActivosClienteOrdenados(idCliente);
+    
+    if (creditos.isEmpty) {
+      throw Exception('El cliente no tiene créditos activos');
+    }
+    
+    // Validar que el abono no exceda la deuda total
+    final deudaTotal = creditos.fold<double>(0.0, (sum, c) => sum + c.saldoActual);
+    if (montoAbono > deudaTotal + 0.01) { // Tolerancia para decimales
+      throw Exception('El abono (S/ ${montoAbono.toStringAsFixed(2)}) excede la deuda total (S/ ${deudaTotal.toStringAsFixed(2)})');
+    }
+    
+    double montoRestante = montoAbono;
+    final abonosCreados = <int>[];
+    
+    // 2. Distribuir el abono entre los créditos (FIFO)
+    for (final credito in creditos) {
+      if (montoRestante <= 0.01) break; // Tolerancia para decimales
+      
+      // Calcular cuánto se puede abonar a este crédito
+      final montoAAbonar = montoRestante >= credito.saldoActual
+          ? credito.saldoActual
+          : montoRestante;
+      
+      // 3. Registrar el abono para este crédito específico
+      final idAbono = await _db.into(_db.abonos).insert(
+        AbonosCompanion.insert(
+          idCredito: credito.idCredito,
+          fecha: fecha,
+          montoAbono: montoAAbonar,
+        ),
+      );
+      
+      abonosCreados.add(idAbono);
+      
+      // 4. Actualizar el saldo del crédito
+      final nuevoSaldo = credito.saldoActual - montoAAbonar;
+      await _creditosRepo.actualizarSaldo(credito.idCredito, nuevoSaldo);
+      
+      // 5. Reducir el monto restante
+      montoRestante -= montoAAbonar;
+    }
+    
+    return abonosCreados;
+  }
+
   // Obtener todos los abonos
   Future<List<Abono>> obtenerTodos() {
     return (_db.select(_db.abonos)..orderBy([(a) => OrderingTerm.desc(a.fecha)])).get();

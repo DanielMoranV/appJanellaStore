@@ -6,7 +6,7 @@ class CreditosRepository {
 
   CreditosRepository(this._db);
 
-  // Crear crédito
+  // Crear crédito (estructura restaurada)
   Future<int> crearCredito({
     required int idVenta,
     required int idCliente,
@@ -26,17 +26,21 @@ class CreditosRepository {
 
   // Obtener todos los créditos
   Future<List<Credito>> obtenerTodos() {
-    return (_db.select(_db.creditos)..orderBy([(c) => OrderingTerm.desc(c.fecha)])).get();
+    return (_db.select(_db.creditos)
+          ..orderBy([(c) => OrderingTerm.desc(c.fecha)]))
+        .get();
   }
 
   // Obtener crédito por ID
   Future<Credito?> obtenerPorId(int id) {
-    return (_db.select(_db.creditos)..where((c) => c.idCredito.equals(id))).getSingleOrNull();
+    return (_db.select(_db.creditos)..where((c) => c.idCredito.equals(id)))
+        .getSingleOrNull();
   }
 
   // Obtener crédito por ID de venta
   Future<Credito?> obtenerPorIdVenta(int idVenta) {
-    return (_db.select(_db.creditos)..where((c) => c.idVenta.equals(idVenta))).getSingleOrNull();
+    return (_db.select(_db.creditos)..where((c) => c.idVenta.equals(idVenta)))
+        .getSingleOrNull();
   }
 
   // Obtener créditos de un cliente
@@ -49,10 +53,22 @@ class CreditosRepository {
     return _db.getCreditosActivos();
   }
 
+  // Obtener créditos activos de un cliente ordenados por fecha (FIFO)
+  Future<List<Credito>> obtenerCreditosActivosClienteOrdenados(int idCliente) {
+    return (_db.select(_db.creditos)
+          ..where((c) =>
+              c.idCliente.equals(idCliente) &
+              c.saldoActual.isBiggerThanValue(0))
+          ..orderBy([(c) => OrderingTerm.asc(c.fecha)])) // Más antiguos primero
+        .get();
+  }
+
   // Obtener créditos activos de un cliente
   Future<List<Credito>> obtenerCreditosActivosCliente(int idCliente) {
     return (_db.select(_db.creditos)
-          ..where((c) => c.idCliente.equals(idCliente) & c.saldoActual.isBiggerThanValue(0))
+          ..where((c) =>
+              c.idCliente.equals(idCliente) &
+              c.saldoActual.isBiggerThanValue(0))
           ..orderBy([(c) => OrderingTerm.desc(c.fecha)]))
         .get();
   }
