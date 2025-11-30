@@ -305,6 +305,35 @@ class AppDatabase extends _$AppDatabase {
           ..orderBy([(v) => OrderingTerm.desc(v.fecha)]))
         .get();
   }
+
+  // Obtener ventas con cliente (con filtros opcionales)
+  Future<List<VentaConCliente>> getVentasConCliente({
+    DateTime? inicio,
+    DateTime? fin,
+    int? idCliente,
+  }) async {
+    final query = select(ventas).join([
+      innerJoin(clientes, clientes.idCliente.equalsExp(ventas.idCliente)),
+    ]);
+
+    if (inicio != null && fin != null) {
+      query.where(ventas.fecha.isBetweenValues(inicio, fin));
+    }
+
+    if (idCliente != null) {
+      query.where(ventas.idCliente.equals(idCliente));
+    }
+
+    query.orderBy([OrderingTerm.desc(ventas.fecha)]);
+
+    final result = await query.get();
+    return result.map((row) {
+      return VentaConCliente(
+        venta: row.readTable(ventas),
+        cliente: row.readTable(clientes),
+      );
+    }).toList();
+  }
 }
 
 // ============================================================================
@@ -330,6 +359,13 @@ class CreditoConCliente {
   final Cliente cliente;
 
   CreditoConCliente({required this.credito, required this.cliente});
+}
+
+class VentaConCliente {
+  final Venta venta;
+  final Cliente cliente;
+
+  VentaConCliente({required this.venta, required this.cliente});
 }
 
 // ============================================================================

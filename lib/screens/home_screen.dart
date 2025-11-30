@@ -5,6 +5,7 @@ import 'package:janella_store/providers/cart_provider.dart';
 import 'package:janella_store/providers/providers.dart';
 import 'package:intl/intl.dart';
 import 'package:janella_store/constants/app_constants.dart';
+import 'package:janella_store/services/auto_seeder_service.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -21,82 +22,97 @@ class HomeScreen extends ConsumerWidget {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: GridView.count(
-          crossAxisCount: 2,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          children: [
-            _MenuCard(
-              icon: Icons.inventory_2,
-              title: 'Productos',
-              subtitle: 'Catálogo',
-              color: Colors.blue,
-              onTap: () => context.push('/productos'),
-            ),
-            _MenuCard(
-              icon: Icons.people,
-              title: 'Clientes',
-              subtitle: 'Gestionar',
-              color: Colors.green,
-              onTap: () => context.push('/clientes'),
-            ),
-            _MenuCard(
-              icon: Icons.credit_card,
-              title: 'Créditos',
-              subtitle: 'Deudas',
-              color: Colors.orange,
-              onTap: () => context.push('/creditos'),
-            ),
-            _MenuCard(
-              icon: Icons.add_shopping_cart,
-              title: 'Ingresos',
-              subtitle: 'Mercadería',
-              color: Colors.purple,
-              onTap: () => context.push('/ingresos'),
-            ),
-            _MenuCard(
-              icon: Icons.bar_chart,
-              title: 'Reportes',
-              subtitle: 'Estadísticas',
-              color: Colors.teal,
-              onTap: () => context.push('/reportes'),
-            ),
-            _MenuCard(
-              icon: Icons.local_shipping,
-              title: 'Proveedores',
-              subtitle: 'Gestionar',
-              color: Colors.indigo,
-              onTap: () => context.push('/proveedores'),
-            ),
-            _MenuCard(
-              icon: Icons.point_of_sale,
-              title: 'POS',
-              subtitle: 'Venta Rápida',
-              color: Colors.deepPurple,
-              onTap: () => context.push('/pos'),
-            ),
-            _MenuCard(
-              icon: Icons.assignment,
-              title: 'Kardex',
-              subtitle: 'Movimientos',
-              color: Colors.teal.shade700,
-              onTap: () => context.push('/kardex'),
-            ),
-            _MenuCard(
-              icon: Icons.history,
-              title: 'Historial',
-              subtitle: 'Ventas',
-              color: Colors.indigo.shade700,
-              onTap: () => context.push('/historial-ventas'),
-            ),
-            _MenuCard(
-              icon: Icons.storage,
-              title: 'Seeder',
-              subtitle: 'Poblar BD',
-              color: Colors.deepPurple.shade700,
-              onTap: () => context.push('/seeder'),
-            ),
-          ],
+        child: FutureBuilder<bool>(
+          future: AutoSeederService.isSeederExecuted(),
+          builder: (context, snapshot) {
+            final seederExecuted = snapshot.data ?? true; // Default to hidden
+
+            return GridView.count(
+              crossAxisCount: 2,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              children: [
+                _MenuCard(
+                  icon: Icons.inventory_2,
+                  title: 'Productos',
+                  subtitle: 'Catálogo',
+                  color: Colors.blue,
+                  onTap: () => context.push('/productos'),
+                ),
+                _MenuCard(
+                  icon: Icons.people,
+                  title: 'Clientes',
+                  subtitle: 'Gestionar',
+                  color: Colors.green,
+                  onTap: () => context.push('/clientes'),
+                ),
+                _MenuCard(
+                  icon: Icons.credit_card,
+                  title: 'Créditos',
+                  subtitle: 'Deudas',
+                  color: Colors.orange,
+                  onTap: () => context.push('/creditos'),
+                ),
+                _MenuCard(
+                  icon: Icons.add_shopping_cart,
+                  title: 'Ingresos',
+                  subtitle: 'Mercadería',
+                  color: Colors.purple,
+                  onTap: () => context.push('/ingresos'),
+                ),
+                _MenuCard(
+                  icon: Icons.bar_chart,
+                  title: 'Reportes',
+                  subtitle: 'Estadísticas',
+                  color: Colors.teal,
+                  onTap: () => context.push('/reportes'),
+                ),
+                _MenuCard(
+                  icon: Icons.local_shipping,
+                  title: 'Proveedores',
+                  subtitle: 'Gestionar',
+                  color: Colors.indigo,
+                  onTap: () => context.push('/proveedores'),
+                ),
+                _MenuCard(
+                  icon: Icons.point_of_sale,
+                  title: 'POS',
+                  subtitle: 'Venta Rápida',
+                  color: Colors.deepPurple,
+                  onTap: () => context.push('/pos'),
+                ),
+                _MenuCard(
+                  icon: Icons.assignment,
+                  title: 'Kardex',
+                  subtitle: 'Movimientos',
+                  color: Colors.teal.shade700,
+                  onTap: () => context.push('/kardex'),
+                ),
+                _MenuCard(
+                  icon: Icons.history,
+                  title: 'Historial',
+                  subtitle: 'Ventas',
+                  color: Colors.indigo.shade700,
+                  onTap: () => context.push('/historial-ventas'),
+                ),
+                if (!seederExecuted)
+                  _MenuCard(
+                    icon: Icons.storage,
+                    title: 'Seeder',
+                    subtitle: 'Poblar BD',
+                    color: Colors.deepPurple.shade700,
+                    onTap: () => context.push('/seeder'),
+                  ),
+                _MenuCard(
+                  icon: Icons.settings,
+                  title: 'Ajustes',
+                  subtitle: 'Configuración',
+                  color: Colors.blueGrey,
+                  onTap: () => context.push('/settings'),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );

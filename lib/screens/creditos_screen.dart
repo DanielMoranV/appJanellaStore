@@ -73,7 +73,7 @@ class _CreditosScreenState extends ConsumerState<CreditosScreen> {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final currencyFormat = AppConstants.currencyFormat;
 
     return Scaffold(

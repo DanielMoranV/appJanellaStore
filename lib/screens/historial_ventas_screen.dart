@@ -19,7 +19,7 @@ class _HistorialVentasScreenState extends ConsumerState<HistorialVentasScreen> {
   DateTime? _fechaInicio;
   DateTime? _fechaFin;
   Cliente? _clienteSeleccionado;
-  List<Venta> _ventas = [];
+  List<VentaConCliente> _ventas = []; // Changed to VentaConCliente
   bool _isLoading = false;
 
   @override
@@ -29,7 +29,11 @@ class _HistorialVentasScreenState extends ConsumerState<HistorialVentasScreen> {
     final now = DateTime.now();
     _fechaInicio = DateTime(now.year, now.month, 1);
     _fechaFin = DateTime(now.year, now.month + 1, 0);
-    _cargarVentas();
+    
+    // Defer loading to next frame to allow safe context usage
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _cargarVentas();
+    });
   }
 
   Future<void> _cargarVentas() async {
@@ -38,35 +42,14 @@ class _HistorialVentasScreenState extends ConsumerState<HistorialVentasScreen> {
     setState(() => _isLoading = true);
 
     final ventasRepo = ref.read(ventasRepositoryProvider);
-    final db = ref.read(databaseProvider);
 
     try {
-      List<Venta> ventas;
-
-      if (_clienteSeleccionado != null) {
-        // Filtrar por cliente
-        ventas = await ventasRepo.obtenerPorCliente(
-          _clienteSeleccionado!.idCliente,
-        );
-      } else if (_fechaInicio != null && _fechaFin != null) {
-        // Filtrar por rango de fechas
-        ventas =
-            await (db.select(db.ventas)
-                  ..where(
-                    (v) =>
-                        v.fecha.isBiggerOrEqualValue(_fechaInicio!) &
-                        v.fecha.isSmallerOrEqualValue(
-                          _fechaFin!.add(const Duration(days: 1)),
-                        ),
-                  )
-                  ..orderBy([(v) => OrderingTerm.desc(v.fecha)]))
-                .get();
-      } else {
-        // Todas las ventas
-        ventas = await (db.select(
-          db.ventas,
-        )..orderBy([(v) => OrderingTerm.desc(v.fecha)])).get();
-      }
+      // Use the new optimized method
+      final ventas = await ventasRepo.obtenerVentasConCliente(
+        inicio: _fechaInicio,
+        fin: _fechaFin != null ? _fechaFin!.add(const Duration(days: 1)) : null,
+        idCliente: _clienteSeleccionado?.idCliente,
+      );
 
       if (mounted) {
         setState(() {
@@ -167,7 +150,7 @@ class _HistorialVentasScreenState extends ConsumerState<HistorialVentasScreen> {
   }
 
   double get _totalVentas {
-    return _ventas.fold(0.0, (sum, v) => sum + v.total);
+    return _ventas.fold(0.0, (sum, v) => sum + v.venta.total);
   }
 
   @override
@@ -347,102 +330,97 @@ class _HistorialVentasScreenState extends ConsumerState<HistorialVentasScreen> {
                       padding: const EdgeInsets.all(16),
                       itemCount: _ventas.length,
                       itemBuilder: (context, index) {
-                        final venta = _ventas[index];
-                        return FutureBuilder<Cliente?>(
-                          future: ref
-                              .read(clientesRepositoryProvider)
-                              .obtenerPorId(venta.idCliente),
-                          builder: (context, snapshot) {
-                            final cliente = snapshot.data;
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              child: ExpansionTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: venta.esCredito
-                                      ? Colors.orange
-                                      : Colors.green,
-                                  child: Icon(
-                                    venta.esCredito
-                                        ? Icons.credit_card
-                                        : Icons.attach_money,
-                                    color: Colors.white,
+                        final item = _ventas[index];
+                        final venta = item.venta;
+                        final cliente = item.cliente;
+                        
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: ExpansionTile(
+                            leading: CircleAvatar(
+                              backgroundColor: venta.esCredito
+                                  ? Colors.orange
+                                  : Colors.green,
+                              child: Icon(
+                                venta.esCredito
+                                    ? Icons.credit_card
+                                    : Icons.attach_money,
+                                color: Colors.white,
+                              ),
+                            ),
+                            title: Text(
+                              cliente.nombre,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            subtitle: Text(
+                              DateFormat(
+                                'dd/MM/yyyy HH:mm',
+                              ).format(venta.fecha),
+                            ),
+                            trailing: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  AppConstants.currencyFormat.format(
+                                    venta.total,
                                   ),
-                                ),
-                                title: Text(
-                                  cliente?.nombre ?? 'Cargando...',
                                   style: const TextStyle(
+                                    fontSize: 16,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                                subtitle: Text(
-                                  DateFormat(
-                                    'dd/MM/yyyy HH:mm',
-                                  ).format(venta.fecha),
-                                ),
-                                trailing: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text(
-                                      AppConstants.currencyFormat.format(
-                                        venta.total,
-                                      ),
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    Text(
-                                      venta.esCredito ? 'Crédito' : 'Efectivo',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: venta.esCredito
-                                            ? Colors.orange
-                                            : Colors.green,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                children: [
-                                  FutureBuilder<List<DetalleVentaConProducto>>(
-                                    future: ref
-                                        .read(databaseProvider)
-                                        .getDetallesVenta(venta.idVenta),
-                                    builder: (context, detallesSnapshot) {
-                                      if (!detallesSnapshot.hasData) {
-                                        return const Padding(
-                                          padding: EdgeInsets.all(16),
-                                          child: CircularProgressIndicator(),
-                                        );
-                                      }
-
-                                      final detalles = detallesSnapshot.data!;
-                                      return Column(
-                                        children: detalles.map((item) {
-                                          return ListTile(
-                                            dense: true,
-                                            title: Text(item.producto.nombre),
-                                            subtitle: Text(
-                                              '${item.detalle.cantidad} × ${AppConstants.currencyFormat.format(item.detalle.precioUnitario)}',
-                                            ),
-                                            trailing: Text(
-                                              AppConstants.currencyFormat
-                                                  .format(
-                                                    item.detalle.subtotal,
-                                                  ),
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          );
-                                        }).toList(),
-                                      );
-                                    },
+                                Text(
+                                  venta.esCredito ? 'Crédito' : 'Efectivo',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: venta.esCredito
+                                        ? Colors.orange
+                                        : Colors.green,
                                   ),
-                                ],
+                                ),
+                              ],
+                            ),
+                            children: [
+                              FutureBuilder<List<DetalleVentaConProducto>>(
+                                future: ref
+                                    .read(databaseProvider)
+                                    .getDetallesVenta(venta.idVenta),
+                                builder: (context, detallesSnapshot) {
+                                  if (!detallesSnapshot.hasData) {
+                                    return const Padding(
+                                      padding: EdgeInsets.all(16),
+                                      child: CircularProgressIndicator(),
+                                    );
+                                  }
+
+                                  final detalles = detallesSnapshot.data!;
+                                  return Column(
+                                    children: detalles.map((item) {
+                                      return ListTile(
+                                        dense: true,
+                                        title: Text(item.producto.nombre),
+                                        subtitle: Text(
+                                          '${item.detalle.cantidad} × ${AppConstants.currencyFormat.format(item.detalle.precioUnitario)}',
+                                        ),
+                                        trailing: Text(
+                                          AppConstants.currencyFormat
+                                              .format(
+                                                item.detalle.subtotal,
+                                              ),
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                  );
+                                },
                               ),
-                            );
-                          },
+                            ],
+                          ),
                         );
                       },
                     ),

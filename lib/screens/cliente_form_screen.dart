@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:janella_store/providers/providers.dart';
+import 'package:janella_store/services/contacts_service.dart';
 
 class ClienteFormScreen extends ConsumerStatefulWidget {
   final int? idCliente;
@@ -111,6 +112,31 @@ class _ClienteFormScreenState extends ConsumerState<ClienteFormScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            if (!_isEditing)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    final contactsService = ContactsService();
+                    final contact = await contactsService.pickContact();
+                    
+                    if (contact != null) {
+                      setState(() {
+                        _nombreController.text = contact.displayName;
+                        if (contact.phones.isNotEmpty) {
+                          _telefonoController.text = contact.phones.first.number;
+                        }
+                        if (contact.emails.isNotEmpty) {
+                          // Si tuviéramos campo email, lo asignaríamos aquí
+                          // _emailController.text = contact.emails.first.address;
+                        }
+                      });
+                    }
+                  },
+                  icon: const Icon(Icons.contacts),
+                  label: const Text('Importar de Contactos'),
+                ),
+              ),
             TextFormField(
               controller: _nombreController,
               decoration: const InputDecoration(

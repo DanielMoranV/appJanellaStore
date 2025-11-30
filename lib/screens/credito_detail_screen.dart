@@ -120,7 +120,7 @@ class _CreditoDetailScreenState extends ConsumerState<CreditoDetailScreen> {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final creditosRepo = ref.read(creditosRepositoryProvider);
     final abonosRepo = ref.read(abonosRepositoryProvider);
     final clientesRepo = ref.read(clientesRepositoryProvider);

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:janella_store/providers/providers.dart';
+import 'package:janella_store/services/contacts_service.dart';
 
 class ProveedoresScreen extends ConsumerStatefulWidget {
   const ProveedoresScreen({super.key});
@@ -41,6 +42,25 @@ class _ProveedoresScreenState extends ConsumerState<ProveedoresScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (idProveedor == null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final contactsService = ContactsService();
+                        final contact = await contactsService.pickContact();
+                        
+                        if (contact != null) {
+                          nombreController.text = contact.displayName;
+                          if (contact.phones.isNotEmpty) {
+                            telefonoController.text = contact.phones.first.number;
+                          }
+                        }
+                      },
+                      icon: const Icon(Icons.contacts),
+                      label: const Text('Importar de Contactos'),
+                    ),
+                  ),
                 TextFormField(
                   controller: nombreController,
                   decoration: const InputDecoration(

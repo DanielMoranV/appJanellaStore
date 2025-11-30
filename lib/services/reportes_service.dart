@@ -1,4 +1,5 @@
 import 'package:janella_store/data/database/database.dart';
+import 'package:drift/drift.dart';
 import 'package:janella_store/data/repositories/ventas_repository.dart';
 import 'package:janella_store/data/repositories/ingresos_repository.dart';
 import 'package:janella_store/data/repositories/creditos_repository.dart';

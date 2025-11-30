@@ -142,6 +142,19 @@ class VentasRepository {
   Future<List<ProductoVendido>> obtenerProductosMasVendidos({int limit = 10}) {
     return _db.getProductosMasVendidos(limit: limit);
   }
+
+  // Obtener ventas con cliente (optimizado)
+  Future<List<VentaConCliente>> obtenerVentasConCliente({
+    DateTime? inicio,
+    DateTime? fin,
+    int? idCliente,
+  }) {
+    return _db.getVentasConCliente(
+      inicio: inicio,
+      fin: fin,
+      idCliente: idCliente,
+    );
+  }
 }
 
 // Clase auxiliar para detalles de venta

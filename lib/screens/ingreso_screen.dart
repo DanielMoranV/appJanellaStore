@@ -75,17 +75,83 @@ class _IngresoScreenState extends ConsumerState<IngresoScreen> {
         title: const Text('Seleccionar Producto'),
         content: SizedBox(
           width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: productos.length,
-            itemBuilder: (context, index) {
-              final prod = productos[index];
-              return ListTile(
-                title: Text(prod.nombre),
-                subtitle: Text(prod.tamano),
-                onTap: () => Navigator.pop(context, prod),
-              );
-            },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Autocomplete<Producto>(
+                optionsBuilder: (TextEditingValue textEditingValue) {
+                  if (textEditingValue.text == '') {
+                    return const Iterable<Producto>.empty();
+                  }
+                  return productos.where((Producto option) {
+                    return option.nombre
+                        .toLowerCase()
+                        .contains(textEditingValue.text.toLowerCase());
+                  });
+                },
+                displayStringForOption: (Producto option) => option.nombre,
+                onSelected: (Producto selection) {
+                  Navigator.pop(context, selection);
+                },
+                fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
+                  return TextField(
+                    controller: textEditingController,
+                    focusNode: focusNode,
+                    decoration: const InputDecoration(
+                      labelText: 'Buscar producto...',
+                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(),
+                    ),
+                  );
+                },
+                optionsViewBuilder: (context, onSelected, options) {
+                  return Align(
+                    alignment: Alignment.topLeft,
+                    child: Material(
+                      elevation: 4.0,
+                      child: SizedBox(
+                        width: 300, // Ajustar según necesidad
+                        child: ListView.builder(
+                          padding: EdgeInsets.zero,
+                          shrinkWrap: true,
+                          itemCount: options.length,
+                          itemBuilder: (BuildContext context, int index) {
+                            final Producto option = options.elementAt(index);
+                            return ListTile(
+                              title: Text(option.nombre),
+                              subtitle: Text('${option.tamano} - \$${option.precioVenta}'),
+                              onTap: () {
+                                onSelected(option);
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'O seleccione de la lista:',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: productos.length,
+                  itemBuilder: (context, index) {
+                    final prod = productos[index];
+                    return ListTile(
+                      title: Text(prod.nombre),
+                      subtitle: Text(prod.tamano),
+                      onTap: () => Navigator.pop(context, prod),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -141,6 +207,16 @@ class _IngresoScreenState extends ConsumerState<IngresoScreen> {
         fecha: DateTime.now(),
         detalles: detalles,
       );
+
+      // Actualizar precios de venta si cambiaron
+      final productosRepo = ref.read(productosRepositoryProvider);
+      for (final detalle in _detalles) {
+        if (detalle.nuevoPrecioVenta != detalle.producto.precioVenta) {
+          await productosRepo.actualizar(
+            detalle.producto.copyWith(precioVenta: detalle.nuevoPrecioVenta),
+          );
+        }
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -292,12 +368,43 @@ class _IngresoScreenState extends ConsumerState<IngresoScreen> {
                                 ],
                               ),
                               const SizedBox(height: 8),
-                              Text(
-                                'Subtotal: ${currencyFormat.format(detalle.cantidad * detalle.costoUnitario)}',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextFormField(
+                                      initialValue: detalle.nuevoPrecioVenta.toString(),
+                                      decoration: const InputDecoration(
+                                        labelText: 'Precio Venta',
+                                        isDense: true,
+                                        prefixText: '\$ ',
+                                      ),
+                                      keyboardType: TextInputType.number,
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.allow(
+                                          RegExp(r'^\d+\.?\d{0,2}'),
+                                        ),
+                                      ],
+                                      onChanged: (value) {
+                                        setState(() {
+                                          detalle.nuevoPrecioVenta =
+                                              double.tryParse(value) ?? 0;
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      'Subtotal: ${currencyFormat.format(detalle.cantidad * detalle.costoUnitario)}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      textAlign: TextAlign.end,
+                                    ),
+                                  ),
+                                ],
                               ),
+
                             ],
                           ),
                         ),
@@ -387,10 +494,12 @@ class _DetalleIngresoItem {
   final Producto producto;
   int cantidad;
   double costoUnitario;
+  double nuevoPrecioVenta;
 
   _DetalleIngresoItem({
     required this.producto,
     this.cantidad = 0,
     this.costoUnitario = 0,
-  });
+    double? nuevoPrecioVenta,
+  }) : nuevoPrecioVenta = nuevoPrecioVenta ?? producto.precioVenta;
 }
