@@ -33,27 +33,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
 
     final cliente = await showDialog<Cliente>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Seleccionar Cliente'),
-        content: SizedBox(
-          width: double.maxFinite,
-          height: 400,
-          child: clientes.isEmpty
-              ? const Center(child: Text('No hay clientes'))
-              : ListView.builder(
-                  itemCount: clientes.length,
-                  itemBuilder: (context, index) {
-                    final c = clientes[index];
-                    return ListTile(
-                      leading: CircleAvatar(child: Text(c.nombre[0])),
-                      title: Text(c.nombre),
-                      subtitle: Text(c.telefono),
-                      onTap: () => Navigator.pop(context, c),
-                    );
-                  },
-                ),
-        ),
-      ),
+      builder: (context) => _ClientSelectionDialog(clientes: clientes),
     );
 
     if (cliente != null) {
@@ -425,6 +405,82 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ClientSelectionDialog extends StatefulWidget {
+  final List<Cliente> clientes;
+
+  const _ClientSelectionDialog({required this.clientes});
+
+  @override
+  State<_ClientSelectionDialog> createState() => _ClientSelectionDialogState();
+}
+
+class _ClientSelectionDialogState extends State<_ClientSelectionDialog> {
+  String _searchQuery = '';
+  late List<Cliente> _filteredClientes;
+
+  @override
+  void initState() {
+    super.initState();
+    _filteredClientes = widget.clientes;
+  }
+
+  void _filter(String query) {
+    setState(() {
+      _searchQuery = query.toLowerCase();
+      _filteredClientes = widget.clientes.where((c) {
+        return c.nombre.toLowerCase().contains(_searchQuery) ||
+            c.telefono.contains(_searchQuery);
+      }).toList();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Seleccionar Cliente'),
+      content: SizedBox(
+        width: double.maxFinite,
+        height: 400,
+        child: Column(
+          children: [
+            TextField(
+              decoration: const InputDecoration(
+                labelText: 'Buscar cliente...',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: _filter,
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: _filteredClientes.isEmpty
+                  ? const Center(child: Text('No se encontraron clientes'))
+                  : ListView.builder(
+                      itemCount: _filteredClientes.length,
+                      itemBuilder: (context, index) {
+                        final c = _filteredClientes[index];
+                        return ListTile(
+                          leading: CircleAvatar(child: Text(c.nombre[0])),
+                          title: Text(c.nombre),
+                          subtitle: Text(c.telefono),
+                          onTap: () => Navigator.pop(context, c),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+      ],
     );
   }
 }

@@ -397,33 +397,91 @@ class _HistorialVentasScreenState extends ConsumerState<HistorialVentasScreen> {
                                   }
 
                                   final detalles = detallesSnapshot.data!;
-                                  return Column(
-                                    children: detalles.map((item) {
-                                      return ListTile(
-                                        dense: true,
-                                        title: Text(item.producto.nombre),
-                                        subtitle: Text(
-                                          '${item.detalle.cantidad} × ${AppConstants.currencyFormat.format(item.detalle.precioUnitario)}',
-                                        ),
-                                        trailing: Text(
-                                          AppConstants.currencyFormat
-                                              .format(
-                                                item.detalle.subtotal,
+                                    return Column(
+                                      children: [
+                                        ...detalles.map((item) {
+                                          return ListTile(
+                                            dense: true,
+                                            title: Text(item.producto.nombre),
+                                            subtitle: Text(
+                                              '${item.detalle.cantidad} × ${AppConstants.currencyFormat.format(item.detalle.precioUnitario)}',
+                                            ),
+                                            trailing: Text(
+                                              AppConstants.currencyFormat
+                                                  .format(
+                                                    item.detalle.subtotal,
+                                                  ),
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
                                               ),
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
+                                            ),
+                                          );
+                                        }).toList(),
+                                        Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: ElevatedButton.icon(
+                                            onPressed: () async {
+                                              final ventasRepo = ref.read(ventasRepositoryProvider); // Assuming ventasRepositoryProvider is available
+                                              final confirm = await showDialog<bool>(
+                                                context: context,
+                                                builder: (context) => AlertDialog(
+                                                  title: const Text('Anular Venta'),
+                                                  content: const Text(
+                                                      '¿Está seguro de anular esta venta? El stock será restaurado y la deuda (si existe) eliminada.'),
+                                                  actions: [
+                                                    TextButton(
+                                                      onPressed: () => Navigator.pop(context, false),
+                                                      child: const Text('Cancelar'),
+                                                    ),
+                                                    TextButton(
+                                                      onPressed: () => Navigator.pop(context, true),
+                                                      child: const Text('Anular'),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+
+                                              if (confirm == true) {
+                                                try {
+                                                  await ventasRepo.eliminarVenta(venta.idVenta);
+                                                  if (context.mounted) {
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      const SnackBar(
+                                                        content: Text('Venta anulada exitosamente'),
+                                                        backgroundColor: Colors.green,
+                                                      ),
+                                                    );
+                                                    _cargarVentas();
+                                                  }
+                                                } catch (e) {
+                                                  if (context.mounted) {
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      SnackBar(
+                                                        content: Text('Error: $e'),
+                                                        backgroundColor: Colors.red,
+                                                      ),
+                                                    );
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            icon: const Icon(Icons.cancel, color: Colors.white),
+                                            label: const Text('Anular Venta'),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.red,
+                                              foregroundColor: Colors.white,
+                                            ),
                                           ),
                                         ),
-                                      );
-                                    }).toList(),
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
+                                      ],
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
             ),
           ],
         ),

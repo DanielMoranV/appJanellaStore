@@ -98,6 +98,25 @@ class IngresosRepository {
           ..orderBy([(i) => OrderingTerm.desc(i.fecha)]))
         .get();
   }
+
+  // Eliminar ingreso y revertir stock
+  Future<void> eliminarIngreso(int idIngreso) async {
+    // 1. Obtener detalles del ingreso
+    final detalles = await obtenerDetalles(idIngreso);
+
+    // 2. Revertir stock (decrementar)
+    for (final item in detalles) {
+      await _productosRepo.decrementarStock(
+        item.detalle.idProducto,
+        item.detalle.cantidad,
+      );
+    }
+
+    // 3. Eliminar el ingreso (los detalles se eliminan por cascade)
+    await (_db.delete(_db.ingresosMercaderia)
+          ..where((i) => i.idIngreso.equals(idIngreso)))
+        .go();
+  }
 }
 
 // Clase auxiliar para detalles de ingreso

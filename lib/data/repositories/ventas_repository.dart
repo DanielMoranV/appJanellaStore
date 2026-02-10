@@ -155,6 +155,32 @@ class VentasRepository {
       idCliente: idCliente,
     );
   }
+
+  // Eliminar venta (Anular) y restaurar stock
+  Future<void> eliminarVenta(int idVenta) async {
+    // 1. Obtener detalles de la venta
+    final detalles = await obtenerDetalles(idVenta);
+
+    // 2. Restaurar stock (incrementar)
+    for (final item in detalles) {
+      await _productosRepo.incrementarStock(
+        item.detalle.idProducto,
+        item.detalle.cantidad,
+      );
+    }
+
+    // 3. Si es crédito, eliminar el crédito
+    final credito = await _creditosRepo.obtenerPorIdVenta(idVenta);
+    if (credito != null) {
+      // Abonos tiene cascade desde Creditos, así que borrar Credito borra Abonos.
+      await (_db.delete(_db.creditos)
+            ..where((c) => c.idCredito.equals(credito.idCredito)))
+          .go();
+    }
+
+    // 4. Eliminar la venta (los detalles tienen cascade)
+    await (_db.delete(_db.ventas)..where((v) => v.idVenta.equals(idVenta))).go();
+  }
 }
 
 // Clase auxiliar para detalles de venta

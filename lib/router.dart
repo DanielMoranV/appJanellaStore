@@ -16,6 +16,7 @@ import 'package:janella_store/screens/proveedores_screen.dart';
 import 'package:janella_store/screens/pos_screen.dart';
 import 'package:janella_store/screens/kardex_screen.dart';
 import 'package:janella_store/screens/historial_ventas_screen.dart';
+import 'package:janella_store/screens/historial_ingresos_screen.dart';
 import 'package:janella_store/screens/seeder_screen.dart';
 import 'package:janella_store/screens/settings_screen.dart';
 
@@ -92,6 +93,11 @@ final router = GoRouter(
     GoRoute(
       path: '/ingresos',
       name: 'ingresos',
+      builder: (context, state) => const HistorialIngresosScreen(),
+    ),
+    GoRoute(
+      path: '/ingresos/nuevo',
+      name: 'ingreso-nuevo',
       builder: (context, state) => const IngresoScreen(),
     ),
     GoRoute(

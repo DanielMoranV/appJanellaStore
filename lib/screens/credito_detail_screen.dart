@@ -265,6 +265,53 @@ class _CreditoDetailScreenState extends ConsumerState<CreditoDetailScreen> {
                               subtitle: Text(
                                 DateFormat('dd/MM/yyyy HH:mm').format(abono.fecha),
                               ),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red),
+                                onPressed: () async {
+                                  final confirm = await showDialog<bool>(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      title: const Text('Eliminar Abono'),
+                                      content: const Text(
+                                          '¿Está seguro de eliminar este abono? El saldo del crédito será restaurado.'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(context, false),
+                                          child: const Text('Cancelar'),
+                                        ),
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(context, true),
+                                          child: const Text('Eliminar'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+
+                                  if (confirm == true) {
+                                    try {
+                                      await abonosRepo.eliminar(abono.idAbono);
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Abono eliminado'),
+                                            backgroundColor: Colors.green,
+                                          ),
+                                        );
+                                        _refresh();
+                                      }
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Error: $e'),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  }
+                                },
+                              ),
                             ),
                           );
                         },
