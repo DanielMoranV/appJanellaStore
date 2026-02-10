@@ -144,6 +144,20 @@ class AbonosRepository {
     return result.read(_db.abonos.montoAbono.sum()) ?? 0.0;
   }
 
+  // Obtener todos los abonos de un cliente
+  Future<List<AbonoConCredito>> obtenerPorCliente(int idCliente) {
+    return _db.getAbonosCliente(idCliente);
+  }
+
+  // Obtener último abono de un crédito específico
+  Future<Abono?> obtenerUltimoAbonoCredito(int idCredito) {
+    return (_db.select(_db.abonos)
+          ..where((a) => a.idCredito.equals(idCredito))
+          ..orderBy([(a) => OrderingTerm.desc(a.fecha)])
+          ..limit(1))
+        .getSingleOrNull();
+  }
+
   // Eliminar abono (en caso de error)
   Future<int> eliminar(int id) async {
     // Obtener el abono antes de eliminarlo

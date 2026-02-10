@@ -19,6 +19,7 @@ import 'package:janella_store/screens/historial_ventas_screen.dart';
 import 'package:janella_store/screens/historial_ingresos_screen.dart';
 import 'package:janella_store/screens/seeder_screen.dart';
 import 'package:janella_store/screens/settings_screen.dart';
+import 'package:janella_store/screens/estado_cuenta_screen.dart';
 
 final router = GoRouter(
   initialLocation: '/',
@@ -75,6 +76,14 @@ final router = GoRouter(
       builder: (context, state) {
         final id = int.parse(state.pathParameters['id']!);
         return ClienteCreditosScreen(idCliente: id);
+      },
+    ),
+    GoRoute(
+      path: '/clientes/:id/estado-cuenta',
+      name: 'estado-cuenta',
+      builder: (context, state) {
+        final id = int.parse(state.pathParameters['id']!);
+        return EstadoCuentaScreen(idCliente: id);
       },
     ),
     GoRoute(

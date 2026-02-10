@@ -298,6 +298,23 @@ class AppDatabase extends _$AppDatabase {
         .get();
   }
 
+  // Obtener todos los abonos de un cliente (join abonos con creditos)
+  Future<List<AbonoConCredito>> getAbonosCliente(int idCliente) async {
+    final query = select(abonos).join([
+      innerJoin(creditos, creditos.idCredito.equalsExp(abonos.idCredito)),
+    ])
+      ..where(creditos.idCliente.equals(idCliente))
+      ..orderBy([OrderingTerm.desc(abonos.fecha)]);
+
+    final result = await query.get();
+    return result.map((row) {
+      return AbonoConCredito(
+        abono: row.readTable(abonos),
+        credito: row.readTable(creditos),
+      );
+    }).toList();
+  }
+
   // Obtener historial de ventas de un cliente
   Future<List<Venta>> getVentasCliente(int idCliente) {
     return (select(ventas)
@@ -366,6 +383,13 @@ class VentaConCliente {
   final Cliente cliente;
 
   VentaConCliente({required this.venta, required this.cliente});
+}
+
+class AbonoConCredito {
+  final Abono abono;
+  final Credito credito;
+
+  AbonoConCredito({required this.abono, required this.credito});
 }
 
 // ============================================================================

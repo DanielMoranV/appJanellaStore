@@ -114,4 +114,22 @@ class CreditosRepository {
         .get();
     return creditos.length;
   }
+
+  // Obtener créditos saldados de un cliente (saldoActual = 0)
+  Future<List<Credito>> obtenerCreditosSaldadosCliente(int idCliente) {
+    return (_db.select(_db.creditos)
+          ..where((c) =>
+              c.idCliente.equals(idCliente) &
+              c.saldoActual.isSmallerOrEqualValue(0))
+          ..orderBy([(c) => OrderingTerm.desc(c.fecha)]))
+        .get();
+  }
+
+  // Obtener todos los créditos de un cliente (activos + saldados)
+  Future<List<Credito>> obtenerTodosCreditosCliente(int idCliente) {
+    return (_db.select(_db.creditos)
+          ..where((c) => c.idCliente.equals(idCliente))
+          ..orderBy([(c) => OrderingTerm.desc(c.fecha)]))
+        .get();
+  }
 }

@@ -4,6 +4,7 @@ import 'package:janella_store/providers/providers.dart';
 import 'package:janella_store/data/database/database.dart';
 import 'package:intl/intl.dart';
 import 'package:janella_store/constants/app_constants.dart';
+import 'package:go_router/go_router.dart';
 
 class ClienteDetailScreen extends ConsumerWidget {
   final int idCliente;
@@ -102,6 +103,17 @@ class ClienteDetailScreen extends ConsumerWidget {
                       ),
                     ],
                   ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Boton Estado de Cuenta
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.account_balance_wallet, color: Colors.indigo),
+                  title: const Text('Ver Estado de Cuenta'),
+                  subtitle: const Text('Historial completo de creditos y abonos'),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () => context.push('/clientes/$idCliente/estado-cuenta'),
                 ),
               ),
               const SizedBox(height: 16),
