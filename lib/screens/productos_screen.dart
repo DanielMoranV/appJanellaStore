@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:janella_store/data/database/database.dart';
 import 'package:janella_store/providers/providers.dart';
 import 'package:janella_store/providers/cart_provider.dart';
 import 'package:janella_store/widgets/product_card.dart';
-import 'package:intl/intl.dart';
 
 class ProductosScreen extends ConsumerStatefulWidget {
   const ProductosScreen({super.key});

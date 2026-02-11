@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:janella_store/data/database/database.dart';
 import 'package:janella_store/providers/cart_provider.dart';
-import 'package:intl/intl.dart';
 import 'package:janella_store/constants/app_constants.dart';
 
 class ProductCard extends ConsumerWidget {

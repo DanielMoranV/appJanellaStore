@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:janella_store/providers/cart_provider.dart';
-import 'package:janella_store/providers/providers.dart';
-import 'package:intl/intl.dart';
 import 'package:janella_store/constants/app_constants.dart';
 import 'package:janella_store/services/auto_seeder_service.dart';
 
